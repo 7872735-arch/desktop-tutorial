@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>陳大哥生日快樂</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; min-height: 100vh; font-family: 'Noto Sans TC', sans-serif; background: #0d0621; overflow-x: hidden; }
+
+  .page {
+    min-height: 100vh; width: 100%; position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 16px 56px;
+    background:
+      radial-gradient(ellipse at 15% 30%, #2d1b69 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 70%, #1a3a5c 0%, transparent 45%),
+      radial-gradient(ellipse at 50% 100%, #3d0a0a 0%, transparent 50%),
+      #0d0621;
+  }
+
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .star { position: absolute; border-radius: 50%; background: #fff; animation: twinkle var(--d,2s) infinite alternate; }
+  @keyframes twinkle { from{opacity:.15;transform:scale(1)} to{opacity:1;transform:scale(1.4)} }
+
+  .confetti { position: fixed; border-radius: 2px; animation: fall var(--d,4s) linear infinite; pointer-events: none; z-index: 1; }
+  @keyframes fall { 0%{transform:translateY(-30px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(720deg);opacity:0} }
+
+  .orb { position: fixed; border-radius: 50%; filter: blur(70px); animation: pulse var(--d,4s) ease-in-out infinite alternate; pointer-events: none; z-index: 0; }
+  @keyframes pulse { from{opacity:.25;transform:scale(1)} to{opacity:.55;transform:scale(1.15)} }
+
+  .card {
+    position: relative; z-index: 10;
+    width: 100%; max-width: 460px;
+    background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,200,100,.3);
+    border-radius: 24px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 60px rgba(255,180,50,.15), inset 0 1px 0 rgba(255,255,255,.1);
+    padding: clamp(20px,5vw,36px) clamp(18px,5vw,36px) clamp(26px,5vw,40px);
+    text-align: center;
+  }
+
+  .tag {
+    display: inline-block;
+    background: linear-gradient(90deg, #ff6b35, #f7c59f);
+    color: #1a0a2e; font-size: clamp(10px,2.5vw,13px); font-weight: 900;
+    letter-spacing: 3px; padding: 5px 16px; border-radius: 20px;
+    margin-bottom: clamp(12px,3vw,20px); text-transform: uppercase;
+  }
+
+  .main-title {
+    font-size: clamp(38px,10vw,60px); font-weight: 900;
+    background: linear-gradient(135deg, #ffd700, #ff9500, #ff6b35);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    line-height: 1.15; margin-bottom: clamp(6px,2vw,12px);
+    filter: drop-shadow(0 2px 8px rgba(255,180,0,.4));
+  }
+
+  .subtitle { font-size: clamp(13px,3.5vw,18px); color: rgba(255,220,150,.9); margin-bottom: clamp(12px,3vw,20px); letter-spacing: 1px; }
+
+  .divider { width: 60px; height: 1px; background: linear-gradient(90deg,transparent,rgba(255,200,100,.5),transparent); margin: clamp(10px,2.5vw,16px) auto; }
+
+  .cake-wrap { margin: clamp(8px,2vw,14px) 0; }
+  .cake {
+    font-size: clamp(52px,14vw,84px); display: inline-block;
+    animation: wobble 1.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 18px rgba(255,200,100,.6));
+  }
+  @keyframes wobble { 0%,100%{transform:rotate(-4deg) scale(1)} 50%{transform:rotate(4deg) scale(1.07)} }
+
+  .joke-box {
+    background: linear-gradient(135deg, rgba(255,107,53,.15), rgba(255,197,159,.08));
+    border: 1px solid rgba(255,150,80,.4); border-radius: 16px;
+    padding: clamp(16px,4vw,22px) clamp(14px,4vw,22px);
+    margin: clamp(16px,4vw,22px) 0 clamp(8px,2vw,12px);
+    position: relative;
+  }
+  .joke-box::before { content:'😂'; position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:clamp(22px,6vw,30px); }
+
+  .joke-text { color: #f7c59f; font-size: clamp(13px,3.5vw,16px); line-height: 2; }
+  .joke-text strong { color: #ffd700; font-weight: 700; }
+  .punchline { display:block; color:#ff6b35; font-size:clamp(13px,3.5vw,16px); font-weight:700; margin-top:clamp(8px,2vw,12px); }
+
+  .emoji-row { display:flex; align-items:center; justify-content:center; gap:clamp(8px,3vw,14px); margin:clamp(10px,3vw,16px) 0; }
+  .emoji-row span { font-size:clamp(24px,6.5vw,32px); display:inline-block; animation:bounce 1s ease-in-out infinite; }
+  .emoji-row span:nth-child(2){animation-delay:.15s}
+  .emoji-row span:nth-child(3){animation-delay:.3s}
+  .emoji-row span:nth-child(4){animation-delay:.45s}
+  .emoji-row span:nth-child(5){animation-delay:.6s}
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+
+  .sign-off { font-size:clamp(11px,2.8vw,14px); color:rgba(255,220,150,.5); letter-spacing:2px; margin-top:clamp(6px,2vw,10px); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="stars" id="stars"></div>
+  <div class="orb" style="width:240px;height:240px;background:#ff6b35;top:-90px;left:-90px;--d:3s;"></div>
+  <div class="orb" style="width:210px;height:210px;background:#ffd700;bottom:-70px;right:-70px;--d:5s;"></div>
+  <div class="orb" style="width:150px;height:150px;background:#a855f7;top:40%;right:-50px;--d:4s;"></div>
+
+  <div class="card">
+    <div class="tag">🎂 特別公告 🎂</div>
+    <div class="main-title">陳大哥<br>生日快樂！</div>
+    <div class="subtitle">恭喜您又年輕了一歲 🙈</div>
+    <div class="divider"></div>
+    <div class="cake-wrap"><span class="cake">🎂</span></div>
+    <div class="joke-box">
+      <p class="joke-text">
+        醫生說：「您的身體狀況像個<strong>十來歲的年輕人！</strong>」<br>
+        陳大哥開心問：「<strong>紅豆泥？！</strong>」<br>
+        醫生：<strong>「怎保養的？像個十來歲的少年欸！」</strong>
+      </p>
+      <span class="punchline">但沒關係，今年的蛋糕熱量不算！🎂</span>
+    </div>
+    <div class="divider"></div>
+    <div class="emoji-row">
+      <span>🎉</span><span>🥳</span><span>🍰</span><span>🎁</span><span>🎊</span>
+    </div>
+    <p class="sign-off">祝 身體健康 · 萬事如意 · 越活越帥</p>
+  </div>
+</div>
+
+<script>
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 70; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${1.5+Math.random()*2.5}s;animation-delay:${Math.random()*3}s;`;
+    starsEl.appendChild(s);
+  }
+  const cols = ['#ffd700','#ff6b35','#a855f7','#22d3ee','#f7c59f','#ff9500','#ec4899'];
+  for (let i = 0; i < 22; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    const sz = 6 + Math.random() * 7;
+    c.style.cssText = `background:${cols[Math.floor(Math.random()*cols.length)]};width:${sz}px;height:${sz}px;border-radius:${Math.random()>.5?'50%':'3px'};left:${Math.random()*100}%;top:0;--d:${3+Math.random()*5}s;animation-delay:${Math.random()*6}s;`;
+    document.body.appendChild(c);
+  }
+</script>
+</body>
+</html>
