@@ -2,144 +2,605 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>陳大哥生日快樂</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iVPT C級 越南語學習助理</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; min-height: 100vh; font-family: 'Noto Sans TC', sans-serif; background: #0d0621; overflow-x: hidden; }
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: rgba(255,255,255,.08);
+    --accent: #4f8ef7;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --radius: 12px;
+  }
+  html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
 
-  .page {
-    min-height: 100vh; width: 100%; position: relative;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 40px 16px 56px;
-    background:
-      radial-gradient(ellipse at 15% 30%, #2d1b69 0%, transparent 55%),
-      radial-gradient(ellipse at 85% 70%, #1a3a5c 0%, transparent 45%),
-      radial-gradient(ellipse at 50% 100%, #3d0a0a 0%, transparent 50%),
-      #0d0621;
+  /* Layout */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 260px; min-width: 260px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 16px;
+    gap: 20px;
+  }
+  .logo { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: .5px; }
+  .logo span { color: var(--accent); }
+  .logo small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+
+  .status-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border-radius: 8px; padding: 8px 12px;
+    font-size: 12px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.error { background: var(--red); }
+  #status-text { color: var(--muted); }
+
+  .section-label {
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
   }
 
-  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-  .star { position: absolute; border-radius: 50%; background: #fff; animation: twinkle var(--d,2s) infinite alternate; }
-  @keyframes twinkle { from{opacity:.15;transform:scale(1)} to{opacity:1;transform:scale(1.4)} }
-
-  .confetti { position: fixed; border-radius: 2px; animation: fall var(--d,4s) linear infinite; pointer-events: none; z-index: 1; }
-  @keyframes fall { 0%{transform:translateY(-30px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(720deg);opacity:0} }
-
-  .orb { position: fixed; border-radius: 50%; filter: blur(70px); animation: pulse var(--d,4s) ease-in-out infinite alternate; pointer-events: none; z-index: 0; }
-  @keyframes pulse { from{opacity:.25;transform:scale(1)} to{opacity:.55;transform:scale(1.15)} }
-
-  .card {
-    position: relative; z-index: 10;
-    width: 100%; max-width: 460px;
-    background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
-    border: 1px solid rgba(255,200,100,.3);
-    border-radius: 24px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 0 60px rgba(255,180,50,.15), inset 0 1px 0 rgba(255,255,255,.1);
-    padding: clamp(20px,5vw,36px) clamp(18px,5vw,36px) clamp(26px,5vw,40px);
-    text-align: center;
+  .quick-btns { display: flex; flex-direction: column; gap: 6px; }
+  .qbtn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer;
+    font-size: 13px; text-align: left; transition: all .15s;
+  }
+  .qbtn:hover { background: var(--surface2); border-color: var(--accent); }
+  .qbtn .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+  .qbtn .label { flex: 1; }
+  .qbtn .badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: rgba(79,142,247,.15); color: var(--accent); font-weight: 600;
   }
 
-  .tag {
-    display: inline-block;
-    background: linear-gradient(90deg, #ff6b35, #f7c59f);
-    color: #1a0a2e; font-size: clamp(10px,2.5vw,13px); font-weight: 900;
-    letter-spacing: 3px; padding: 5px 16px; border-radius: 20px;
-    margin-bottom: clamp(12px,3vw,20px); text-transform: uppercase;
+  /* Context tracker */
+  .context-track { background: var(--surface2); border-radius: 8px; padding: 12px; }
+  .context-track .ct-title { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .ct-items { display: flex; flex-direction: column; gap: 4px; }
+  .ct-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; padding: 4px 6px; border-radius: 6px;
+    transition: background .15s;
+  }
+  .ct-item.active { background: rgba(79,142,247,.12); color: var(--accent); }
+  .ct-item .ct-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .ct-item.active .ct-dot { background: var(--accent); }
+
+  /* Settings */
+  .settings { display: flex; flex-direction: column; gap: 8px; }
+  .settings input, .settings select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: 12px;
+  }
+  .settings input:focus, .settings select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .settings label { font-size: 11px; color: var(--muted); margin-bottom: 2px; display: block; }
+
+  .btn-connect {
+    width: 100%; padding: 8px; border-radius: 6px; border: none;
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .btn-connect:hover { opacity: .85; }
+
+  /* Main chat */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .chat-header {
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .mode-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    background: rgba(79,142,247,.1); color: var(--accent); border: 1px solid rgba(79,142,247,.2);
+  }
+  .chat-title { font-size: 14px; color: var(--muted); }
+
+  .messages {
+    flex: 1; overflow-y: auto; padding: 24px;
+    display: flex; flex-direction: column; gap: 16px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg { display: flex; gap: 12px; max-width: 85%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg.assistant { align-self: flex-start; }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .msg.user .avatar { background: var(--accent); }
+  .msg.assistant .avatar { background: var(--surface2); border: 1px solid var(--border); }
+
+  .bubble {
+    padding: 12px 16px; border-radius: 12px; font-size: 14px;
+    line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  }
+  .msg.user .bubble {
+    background: var(--accent); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.assistant .bubble {
+    background: var(--surface); border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
   }
 
-  .main-title {
-    font-size: clamp(38px,10vw,60px); font-weight: 900;
-    background: linear-gradient(135deg, #ffd700, #ff9500, #ff6b35);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    line-height: 1.15; margin-bottom: clamp(6px,2vw,12px);
-    filter: drop-shadow(0 2px 8px rgba(255,180,0,.4));
+  .bubble table { border-collapse: collapse; margin: 8px 0; width: 100%; }
+  .bubble th, .bubble td { border: 1px solid var(--border); padding: 6px 10px; font-size: 13px; text-align: left; }
+  .bubble th { background: var(--surface2); color: var(--accent); }
+  .bubble code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+  .bubble strong { color: var(--yellow); }
+  .bubble em { color: var(--accent2); }
+
+  .typing { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+  /* Welcome */
+  .welcome {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 20px; padding: 40px; text-align: center;
   }
-
-  .subtitle { font-size: clamp(13px,3.5vw,18px); color: rgba(255,220,150,.9); margin-bottom: clamp(12px,3vw,20px); letter-spacing: 1px; }
-
-  .divider { width: 60px; height: 1px; background: linear-gradient(90deg,transparent,rgba(255,200,100,.5),transparent); margin: clamp(10px,2.5vw,16px) auto; }
-
-  .cake-wrap { margin: clamp(8px,2vw,14px) 0; }
-  .cake {
-    font-size: clamp(52px,14vw,84px); display: inline-block;
-    animation: wobble 1.6s ease-in-out infinite;
-    filter: drop-shadow(0 0 18px rgba(255,200,100,.6));
+  .welcome-icon { font-size: 56px; }
+  .welcome h2 { font-size: 22px; font-weight: 700; }
+  .welcome p { color: var(--muted); font-size: 14px; line-height: 1.8; max-width: 420px; }
+  .welcome-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; width: 100%; max-width: 480px; }
+  .wcard {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; text-align: left; cursor: pointer;
+    transition: all .15s;
   }
-  @keyframes wobble { 0%,100%{transform:rotate(-4deg) scale(1)} 50%{transform:rotate(4deg) scale(1.07)} }
+  .wcard:hover { border-color: var(--accent); background: var(--surface2); }
+  .wcard .wc-icon { font-size: 20px; margin-bottom: 6px; }
+  .wcard .wc-cmd { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .wcard .wc-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-  .joke-box {
-    background: linear-gradient(135deg, rgba(255,107,53,.15), rgba(255,197,159,.08));
-    border: 1px solid rgba(255,150,80,.4); border-radius: 16px;
-    padding: clamp(16px,4vw,22px) clamp(14px,4vw,22px);
-    margin: clamp(16px,4vw,22px) 0 clamp(8px,2vw,12px);
-    position: relative;
+  /* Input */
+  .input-area {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-end;
   }
-  .joke-box::before { content:'😂'; position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:clamp(22px,6vw,30px); }
+  .input-wrap { flex: 1; position: relative; }
+  textarea {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 12px 16px;
+    font-size: 14px; resize: none; font-family: inherit;
+    line-height: 1.5; max-height: 140px; overflow-y: auto;
+    transition: border-color .15s;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
 
-  .joke-text { color: #f7c59f; font-size: clamp(13px,3.5vw,16px); line-height: 2; }
-  .joke-text strong { color: #ffd700; font-weight: 700; }
-  .punchline { display:block; color:#ff6b35; font-size:clamp(13px,3.5vw,16px); font-weight:700; margin-top:clamp(8px,2vw,12px); }
+  .send-btn {
+    width: 42px; height: 42px; border-radius: 10px; border: none;
+    background: var(--accent); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0; transition: opacity .15s;
+    margin-bottom: 1px;
+  }
+  .send-btn:hover { opacity: .85; }
+  .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-  .emoji-row { display:flex; align-items:center; justify-content:center; gap:clamp(8px,3vw,14px); margin:clamp(10px,3vw,16px) 0; }
-  .emoji-row span { font-size:clamp(24px,6.5vw,32px); display:inline-block; animation:bounce 1s ease-in-out infinite; }
-  .emoji-row span:nth-child(2){animation-delay:.15s}
-  .emoji-row span:nth-child(3){animation-delay:.3s}
-  .emoji-row span:nth-child(4){animation-delay:.45s}
-  .emoji-row span:nth-child(5){animation-delay:.6s}
-  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
-
-  .sign-off { font-size:clamp(11px,2.8vw,14px); color:rgba(255,220,150,.5); letter-spacing:2px; margin-top:clamp(6px,2vw,10px); }
+  /* Responsive */
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    .msg { max-width: 95%; }
+    .welcome-cards { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="stars" id="stars"></div>
-  <div class="orb" style="width:240px;height:240px;background:#ff6b35;top:-90px;left:-90px;--d:3s;"></div>
-  <div class="orb" style="width:210px;height:210px;background:#ffd700;bottom:-70px;right:-70px;--d:5s;"></div>
-  <div class="orb" style="width:150px;height:150px;background:#a855f7;top:40%;right:-50px;--d:4s;"></div>
+<div class="app">
 
-  <div class="card">
-    <div class="tag">🎂 特別公告 🎂</div>
-    <div class="main-title">陳大哥<br>生日快樂！</div>
-    <div class="subtitle">恭喜您又年輕了一歲 🙈</div>
-    <div class="divider"></div>
-    <div class="cake-wrap"><span class="cake">🎂</span></div>
-    <div class="joke-box">
-      <p class="joke-text">
-        醫生說：「您的身體狀況像個<strong>十來歲的年輕人！</strong>」<br>
-        陳大哥開心問：「<strong>紅豆泥？！</strong>」<br>
-        醫生：<strong>「怎保養的？像個十來歲的少年欸！」</strong>
-      </p>
-      <span class="punchline">但沒關係，今年的蛋糕熱量不算！🎂</span>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div>
+      <div class="logo">🇻🇳 越南語助理<small>iVPT C 級備考系統</small></div>
     </div>
-    <div class="divider"></div>
-    <div class="emoji-row">
-      <span>🎉</span><span>🥳</span><span>🍰</span><span>🎁</span><span>🎊</span>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px">連線狀態</div>
+      <div class="status-bar">
+        <div class="dot" id="dot"></div>
+        <span id="status-text">未連線</span>
+      </div>
     </div>
-    <p class="sign-off">祝 身體健康 · 萬事如意 · 越活越帥</p>
-  </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px">快速指令</div>
+      <div class="quick-btns">
+        <button class="qbtn" onclick="sendQuick('早安')">
+          <span class="icon">🌅</span>
+          <span class="label">早安</span>
+          <span class="badge">晨間</span>
+        </button>
+        <button class="qbtn" onclick="sendQuick('模擬考')">
+          <span class="icon">📝</span>
+          <span class="label">模擬考</span>
+          <span class="badge">C級</span>
+        </button>
+        <button class="qbtn" onclick="sendQuick('今天學什麼')">
+          <span class="icon">🎯</span>
+          <span class="label">今天學什麼</span>
+          <span class="badge">輪替</span>
+        </button>
+        <button class="qbtn" onclick="focusInput()">
+          <span class="icon">✍️</span>
+          <span class="label">輸入越文批改</span>
+          <span class="badge">口說</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px">語境進度</div>
+      <div class="context-track">
+        <div class="ct-title">下次「今天學什麼」的語境：</div>
+        <div class="ct-items" id="ct-items">
+          <div class="ct-item" data-idx="0"><div class="ct-dot"></div>日常社交</div>
+          <div class="ct-item" data-idx="1"><div class="ct-dot"></div>職場商務</div>
+          <div class="ct-item" data-idx="2"><div class="ct-dot"></div>社會文化</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:auto">
+      <div class="section-label" style="margin-bottom:8px">Ollama 設定</div>
+      <div class="settings">
+        <div>
+          <label>API 網址</label>
+          <input type="text" id="ollama-url" value="http://localhost:11434" placeholder="http://localhost:11434">
+        </div>
+        <div>
+          <label>模型（建議中越雙語）</label>
+          <input type="text" id="ollama-model" value="qwen2.5:7b" placeholder="qwen2.5:7b">
+        </div>
+        <button class="btn-connect" onclick="checkConnection()">測試連線</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="chat-header">
+      <div class="mode-badge" id="mode-badge">⭕ 待機中</div>
+      <span class="chat-title" id="mode-desc">輸入指令或越文句子開始學習</span>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">🇻🇳</div>
+        <h2>iVPT C 級越南語學習助理</h2>
+        <p>透過本地 Ollama 模型運行，資料不離開你的電腦。<br>先在左側設定 Ollama 連線，再選擇學習模式開始。</p>
+        <div class="welcome-cards">
+          <div class="wcard" onclick="sendQuick('早安')">
+            <div class="wc-icon">🌅</div>
+            <div class="wc-cmd">早安</div>
+            <div class="wc-desc">晨間詞彙 + 越南新聞</div>
+          </div>
+          <div class="wcard" onclick="sendQuick('模擬考')">
+            <div class="wc-icon">📝</div>
+            <div class="wc-cmd">模擬考</div>
+            <div class="wc-desc">完整 iVPT C 級題組</div>
+          </div>
+          <div class="wcard" onclick="sendQuick('今天學什麼')">
+            <div class="wc-icon">🎯</div>
+            <div class="wc-cmd">今天學什麼</div>
+            <div class="wc-desc">三大語境輪替推薦</div>
+          </div>
+          <div class="wcard" onclick="focusInput()">
+            <div class="wc-icon">✍️</div>
+            <div class="wc-cmd">輸入越文</div>
+            <div class="wc-desc">口說批改 + C 級建議</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea
+          id="input"
+          rows="1"
+          placeholder="輸入「早安」「模擬考」「今天學什麼」或直接貼上越文句子..."
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+      </div>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()" title="送出 (Enter)">➤</button>
+    </div>
+  </main>
 </div>
 
 <script>
-  const starsEl = document.getElementById('stars');
-  for (let i = 0; i < 70; i++) {
-    const s = document.createElement('div');
-    s.className = 'star';
-    const sz = Math.random() * 2.5 + 0.5;
-    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${1.5+Math.random()*2.5}s;animation-delay:${Math.random()*3}s;`;
-    starsEl.appendChild(s);
+// ── State ──────────────────────────────────────────────────────────────────
+let history = [];
+let isLoading = false;
+let contextIdx = parseInt(localStorage.getItem('ivpt_context') || '0');
+
+const CONTEXTS = [
+  { name: '日常社交', icon: '🏠', desc: '家庭、飲食、出行、人際溝通' },
+  { name: '職場商務', icon: '💼', desc: '會議、合約、求職、商業談判' },
+  { name: '社會文化', icon: '🎭', desc: '越南節慶、時事政策、地理歷史' },
+];
+
+const SYSTEM_PROMPT = `你是一位專業的 iVPT 越南語檢定 C 級學習助理，以繁體中文搭配越文進行教學。
+
+你有四種工作模式，根據用戶輸入自動切換：
+
+━━ 模式一：早晨學習模式 ━━
+觸發條件：用戶輸入「早安」
+執行內容：
+1. 推送 5 個 iVPT C 級核心詞彙，格式：
+   • 越文（詞性）：中文意思
+     例句：[越文例句] → [中文翻譯]
+2. 提供一則越南時事短文（150字左右），標注 3 個重要 C 級詞彙（用【】標記）
+3. 附上 3 道短文理解題（含解答）
+
+━━ 模式二：口說批改模式 ━━
+觸發條件：用戶輸入越文句子（不是以下關鍵字）
+執行內容：
+1. ✅ 正確之處（簡短說明）
+2. ⚠️ 需要修正的地方（列出錯誤 + 原因）
+3. 💡 C 級建議版本（更地道、更正式的表達）
+4. 📌 補充：該句型在 iVPT C 級的考試重點
+
+━━ 模式三：模擬考模式 ━━
+觸發條件：用戶輸入「模擬考」
+執行內容：生成完整 iVPT C 級模擬題組：
+【一、詞彙語法】5 題選擇題（A/B/C/D）
+【二、閱讀理解】一篇 200 字短文 + 4 道題目
+【三、情境寫作】一道寫作題目（要求用越文作答 80-120 字）
+最後附上所有答案與解析
+
+━━ 模式四：今日主題推薦模式 ━━
+觸發條件：用戶輸入「今天學什麼」
+系統會告知目前語境（由外部傳入），請按照語境執行：
+若語境為「日常社交」：推薦家庭/飲食/出行相關主題
+若語境為「職場商務」：推薦工作場景相關主題
+若語境為「社會文化」：推薦越南文化/時事相關主題
+
+執行內容：
+1. 主題名稱與背景介紹（3-4句）
+2. 10 個核心詞彙（格式同模式一）
+3. 2 段情境對話（越文 + 中文翻譯）
+
+回應請用清晰的段落排版，適當使用符號（•、━、【】）讓內容易於閱讀。`;
+
+// ── Connection ─────────────────────────────────────────────────────────────
+async function checkConnection() {
+  const url = document.getElementById('ollama-url').value.trim();
+  setStatus('checking');
+  try {
+    const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      setStatus('online');
+      return true;
+    }
+  } catch (e) {}
+  setStatus('error');
+  return false;
+}
+
+function setStatus(state) {
+  const dot = document.getElementById('dot');
+  const text = document.getElementById('status-text');
+  dot.className = 'dot';
+  if (state === 'online') { dot.classList.add('online'); text.textContent = '已連線'; }
+  else if (state === 'error') { dot.classList.add('error'); text.textContent = '連線失敗'; }
+  else { text.textContent = '檢查中...'; }
+}
+
+// ── Mode Detection ─────────────────────────────────────────────────────────
+function detectMode(text) {
+  const t = text.trim();
+  if (t === '早安') return 'morning';
+  if (t === '模擬考') return 'exam';
+  if (t === '今天學什麼') return 'suggest';
+  // Detect Vietnamese: common Vietnamese characters
+  if (/[àáâãèéêìíòóôõùúýăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỷỹỵ]/i.test(t)) return 'correction';
+  return 'general';
+}
+
+function getModeLabel(mode) {
+  const map = {
+    morning: ['🌅 晨間模式', '推送今日詞彙與越南新聞'],
+    exam: ['📝 模擬考模式', '生成 iVPT C 級完整題組'],
+    suggest: ['🎯 今日推薦模式', `語境：${CONTEXTS[contextIdx].icon} ${CONTEXTS[contextIdx].name}`],
+    correction: ['✍️ 口說批改模式', '分析句子並提供 C 級建議'],
+    general: ['💬 一般問答', '自由問答模式'],
+  };
+  return map[mode] || map.general;
+}
+
+// ── Context Rotation ───────────────────────────────────────────────────────
+function updateContextUI() {
+  document.querySelectorAll('.ct-item').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.idx) === contextIdx);
+  });
+}
+
+function advanceContext() {
+  contextIdx = (contextIdx + 1) % 3;
+  localStorage.setItem('ivpt_context', contextIdx);
+  updateContextUI();
+}
+
+// ── Messaging ──────────────────────────────────────────────────────────────
+async function sendQuick(text) {
+  document.getElementById('input').value = text;
+  await sendMessage();
+}
+
+function focusInput() {
+  document.getElementById('input').focus();
+}
+
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Hide welcome
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  input.value = '';
+  autoResize(input);
+
+  const mode = detectMode(text);
+  const [modeLabel, modeDesc] = getModeLabel(mode);
+  document.getElementById('mode-badge').textContent = modeLabel;
+  document.getElementById('mode-desc').textContent = modeDesc;
+
+  appendMessage('user', text);
+
+  // Build user message with context injection for suggest mode
+  let userContent = text;
+  if (mode === 'suggest') {
+    const ctx = CONTEXTS[contextIdx];
+    userContent = `今天學什麼（當前語境：${ctx.name}，說明：${ctx.desc}）`;
+    advanceContext();
   }
-  const cols = ['#ffd700','#ff6b35','#a855f7','#22d3ee','#f7c59f','#ff9500','#ec4899'];
-  for (let i = 0; i < 22; i++) {
-    const c = document.createElement('div');
-    c.className = 'confetti';
-    const sz = 6 + Math.random() * 7;
-    c.style.cssText = `background:${cols[Math.floor(Math.random()*cols.length)]};width:${sz}px;height:${sz}px;border-radius:${Math.random()>.5?'50%':'3px'};left:${Math.random()*100}%;top:0;--d:${3+Math.random()*5}s;animation-delay:${Math.random()*6}s;`;
-    document.body.appendChild(c);
+
+  history.push({ role: 'user', content: userContent });
+
+  const url = document.getElementById('ollama-url').value.trim();
+  const model = document.getElementById('ollama-model').value.trim();
+
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+
+  const typingEl = appendTyping();
+
+  try {
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history
+    ];
+
+    const res = await fetch(`${url}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, stream: true })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    setStatus('online');
+    typingEl.remove();
+
+    const assistantEl = appendMessage('assistant', '');
+    const bubble = assistantEl.querySelector('.bubble');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const data = JSON.parse(line);
+          if (data.message?.content) {
+            fullText += data.message.content;
+            bubble.textContent = fullText;
+            scrollToBottom();
+          }
+        } catch {}
+      }
+    }
+
+    history.push({ role: 'assistant', content: fullText });
+
+  } catch (err) {
+    typingEl.remove();
+    setStatus('error');
+    appendMessage('assistant', `⚠️ 連線失敗：${err.message}\n\n請確認：\n• Ollama 是否已啟動（ollama serve）\n• API 網址是否正確（左側設定）\n• 模型是否已下載（ollama pull ${model}）`);
   }
+
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+  input.focus();
+}
+
+// ── DOM Helpers ────────────────────────────────────────────────────────────
+function appendMessage(role, text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="avatar">${role === 'user' ? '你' : '🇻🇳'}</div>
+    <div class="bubble">${escHtml(text)}</div>
+  `;
+  msgs.appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function appendTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.innerHTML = `
+    <div class="avatar">🇻🇳</div>
+    <div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+  `;
+  msgs.appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scrollToBottom() {
+  const msgs = document.getElementById('messages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── Input Helpers ──────────────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+updateContextUI();
+checkConnection();
 </script>
 </body>
 </html>
