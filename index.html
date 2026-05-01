@@ -133,8 +133,9 @@
 
   .bubble {
     padding: 12px 16px; border-radius: 12px; font-size: 14px;
-    line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+    line-height: 1.7; word-break: break-word;
   }
+  .msg.user .bubble { white-space: pre-wrap; }
   .msg.user .bubble {
     background: var(--accent); color: #fff;
     border-bottom-right-radius: 4px;
@@ -150,6 +151,23 @@
   .bubble code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: monospace; }
   .bubble strong { color: var(--yellow); }
   .bubble em { color: var(--accent2); }
+  .bubble h2,.bubble h3 { color: var(--accent); font-size: 14px; font-weight: 700; margin: 10px 0 4px; }
+  .bubble h4,.bubble h5 { color: var(--accent2); font-size: 13px; font-weight: 700; margin: 8px 0 4px; }
+  .bubble ul,.bubble ol { padding-left: 20px; margin: 4px 0; }
+  .bubble li { margin: 2px 0; }
+  .bubble hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .bubble pre { background: var(--surface2); border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 8px 0; }
+  .bubble pre code { background: none; padding: 0; }
+  .bubble .hl { color: var(--yellow); font-weight: 700; }
+  .bubble .md-div { color: var(--accent); font-weight: 700; font-size: 13px; margin: 10px 0 4px; letter-spacing: .5px; }
+
+  /* Memory counter */
+  .mem-track { background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
+  .mem-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; }
+  .mem-info span:first-child { color: var(--text); font-weight: 600; }
+  .mem-label { color: var(--muted); }
+  .mem-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .mem-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width .3s; }
 
   .typing { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
   .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
@@ -265,6 +283,17 @@
       </div>
     </div>
 
+    <div>
+      <div class="section-label" style="margin-bottom:8px">對話記憶</div>
+      <div class="mem-track">
+        <div class="mem-info">
+          <span id="mem-count">0 / 20</span>
+          <span class="mem-label">則訊息已保留</span>
+        </div>
+        <div class="mem-bar-wrap"><div class="mem-bar" id="mem-bar"></div></div>
+      </div>
+    </div>
+
     <div style="margin-top:auto">
       <div class="section-label" style="margin-bottom:8px">Ollama 設定</div>
       <div class="settings">
@@ -339,6 +368,8 @@ let history = [];
 let isLoading = false;
 let contextIdx = parseInt(localStorage.getItem('ivpt_context') || '0');
 
+const MAX_HISTORY = 20;
+
 const CONTEXTS = [
   { name: '日常社交', icon: '🏠', desc: '家庭、飲食、出行、人際溝通' },
   { name: '職場商務', icon: '💼', desc: '會議、合約、求職、商業談判' },
@@ -388,6 +419,131 @@ const SYSTEM_PROMPT = `你是一位專業的 iVPT 越南語檢定 C 級學習助
 
 回應請用清晰的段落排版，適當使用符號（•、━、【】）讓內容易於閱讀。`;
 
+// ── Markdown Renderer ──────────────────────────────────────────────────────
+function inlineFormat(text) {
+  return text
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/【(.+?)】/g, '<span class="hl">$1</span>');
+}
+
+function renderTable(rows) {
+  let html = '<table>';
+  let isHeader = true;
+  for (const row of rows) {
+    if (/^\|[-:\s|]+\|$/.test(row)) { isHeader = false; continue; }
+    const cells = row.split('|').slice(1, -1);
+    const tag = isHeader ? 'th' : 'td';
+    html += '<tr>' + cells.map(c => `<${tag}>${inlineFormat(c.trim())}</${tag}>`).join('') + '</tr>';
+    if (isHeader) isHeader = false;
+  }
+  return html + '</table>';
+}
+
+function renderMarkdown(raw) {
+  // Escape HTML
+  let text = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Fenced code blocks
+  text = text.replace(/```[\w]*\n?([\s\S]*?)```/g, (_, code) =>
+    `<pre><code>${code.trimEnd()}</code></pre>`);
+
+  const lines = text.split('\n');
+  const out = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Headings
+    const hMatch = line.match(/^(#{1,4}) (.+)/);
+    if (hMatch) {
+      const tag = `h${Math.min(hMatch[1].length + 1, 5)}`;
+      out.push(`<${tag}>${inlineFormat(hMatch[2])}</${tag}>`);
+      i++; continue;
+    }
+
+    // ━━ section divider
+    if (/^━━/.test(line)) {
+      out.push(`<div class="md-div">${inlineFormat(line)}</div>`);
+      i++; continue;
+    }
+
+    // Horizontal rule
+    if (/^-{3,}$/.test(line)) {
+      out.push('<hr>');
+      i++; continue;
+    }
+
+    // Table block
+    if (/^\|/.test(line)) {
+      const tableLines = [];
+      while (i < lines.length && /^\|/.test(lines[i])) tableLines.push(lines[i++]);
+      out.push(renderTable(tableLines));
+      continue;
+    }
+
+    // Unordered list
+    if (/^[•\-\*] /.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[•\-\*] /.test(lines[i]))
+        items.push(`<li>${inlineFormat(lines[i++].replace(/^[•\-\*] /, ''))}</li>`);
+      out.push(`<ul>${items.join('')}</ul>`);
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\. /.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i]))
+        items.push(`<li>${inlineFormat(lines[i++].replace(/^\d+\. /, ''))}</li>`);
+      out.push(`<ol>${items.join('')}</ol>`);
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') { out.push('<br>'); i++; continue; }
+
+    // Normal line
+    out.push(inlineFormat(line) + '<br>');
+    i++;
+  }
+
+  return out.join('');
+}
+
+// ── History Trim ───────────────────────────────────────────────────────────
+function trimHistory() {
+  if (history.length > MAX_HISTORY)
+    history = history.slice(history.length - MAX_HISTORY);
+  const el = document.getElementById('mem-count');
+  const bar = document.getElementById('mem-bar');
+  if (el) el.textContent = `${history.length} / ${MAX_HISTORY}`;
+  if (bar) bar.style.width = `${(history.length / MAX_HISTORY) * 100}%`;
+}
+
+// ── Retry Fetch ────────────────────────────────────────────────────────────
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  let lastErr;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxRetries - 1) {
+        setStatus('retrying', attempt + 1, maxRetries);
+        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 // ── Connection ─────────────────────────────────────────────────────────────
 async function checkConnection() {
   const url = document.getElementById('ollama-url').value.trim();
@@ -403,13 +559,14 @@ async function checkConnection() {
   return false;
 }
 
-function setStatus(state) {
+function setStatus(state, attempt, max) {
   const dot = document.getElementById('dot');
   const text = document.getElementById('status-text');
   dot.className = 'dot';
-  if (state === 'online') { dot.classList.add('online'); text.textContent = '已連線'; }
-  else if (state === 'error') { dot.classList.add('error'); text.textContent = '連線失敗'; }
-  else { text.textContent = '檢查中...'; }
+  if (state === 'online')    { dot.classList.add('online'); text.textContent = '已連線'; }
+  else if (state === 'error')    { dot.classList.add('error');  text.textContent = '連線失敗'; }
+  else if (state === 'retrying') { dot.classList.add('error');  text.textContent = `重試 ${attempt}/${max}…`; }
+  else { text.textContent = '檢查中…'; }
 }
 
 // ── Mode Detection ─────────────────────────────────────────────────────────
@@ -486,6 +643,7 @@ async function sendMessage() {
   }
 
   history.push({ role: 'user', content: userContent });
+  trimHistory();
 
   const url = document.getElementById('ollama-url').value.trim();
   const model = document.getElementById('ollama-model').value.trim();
@@ -501,13 +659,11 @@ async function sendMessage() {
       ...history
     ];
 
-    const res = await fetch(`${url}/api/chat`, {
+    const res = await fetchWithRetry(`${url}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages, stream: true })
     });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     setStatus('online');
     typingEl.remove();
@@ -529,6 +685,7 @@ async function sendMessage() {
           const data = JSON.parse(line);
           if (data.message?.content) {
             fullText += data.message.content;
+            // plain text during streaming for performance
             bubble.textContent = fullText;
             scrollToBottom();
           }
@@ -536,12 +693,17 @@ async function sendMessage() {
       }
     }
 
+    // Switch to full Markdown render after streaming completes
+    bubble.innerHTML = renderMarkdown(fullText);
+    scrollToBottom();
+
     history.push({ role: 'assistant', content: fullText });
+    trimHistory();
 
   } catch (err) {
     typingEl.remove();
     setStatus('error');
-    appendMessage('assistant', `⚠️ 連線失敗：${err.message}\n\n請確認：\n• Ollama 是否已啟動（ollama serve）\n• API 網址是否正確（左側設定）\n• 模型是否已下載（ollama pull ${model}）`);
+    appendMessage('assistant', `⚠️ 連線失敗（已重試 3 次）：${err.message}\n\n請確認：\n• Ollama 是否已啟動（ollama serve）\n• API 網址是否正確\n• 模型是否已下載（ollama pull ${model}）`);
   }
 
   isLoading = false;
@@ -554,9 +716,10 @@ function appendMessage(role, text) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
+  const content = role === 'user' ? escHtml(text) : renderMarkdown(text);
   div.innerHTML = `
     <div class="avatar">${role === 'user' ? '你' : '🇻🇳'}</div>
-    <div class="bubble">${escHtml(text)}</div>
+    <div class="bubble">${content}</div>
   `;
   msgs.appendChild(div);
   scrollToBottom();
@@ -600,6 +763,7 @@ function autoResize(el) {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 updateContextUI();
+trimHistory();
 checkConnection();
 </script>
 </body>
