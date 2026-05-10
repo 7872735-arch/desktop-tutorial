@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 from dataclasses import dataclass, asdict
 from typing import Optional
 
@@ -15,6 +16,7 @@ class Prompt:
 class PromptStorage:
     def __init__(self, filepath: str = "prompts.json"):
         self.filepath = filepath
+        self._lock = threading.Lock()
         self._data: dict = {"prompts": {}, "active": {}}
         self._load()
 
@@ -32,8 +34,17 @@ class PromptStorage:
             json.dump(self._data, f, ensure_ascii=False, indent=2)
 
     def add(self, prompt: Prompt) -> bool:
-        self._data["prompts"][prompt.name] = asdict(prompt)
-        self._save()
+        with self._lock:
+            self._data["prompts"][prompt.name] = asdict(prompt)
+            self._save()
+        return True
+
+    def update(self, prompt: Prompt) -> bool:
+        with self._lock:
+            if prompt.name not in self._data["prompts"]:
+                return False
+            self._data["prompts"][prompt.name] = asdict(prompt)
+            self._save()
         return True
 
     def get(self, name: str) -> Optional[Prompt]:
@@ -43,13 +54,14 @@ class PromptStorage:
         return Prompt(**data)
 
     def delete(self, name: str) -> bool:
-        if name not in self._data["prompts"]:
-            return False
-        del self._data["prompts"][name]
-        for uid, active in list(self._data["active"].items()):
-            if active == name:
-                del self._data["active"][uid]
-        self._save()
+        with self._lock:
+            if name not in self._data["prompts"]:
+                return False
+            del self._data["prompts"][name]
+            for uid, active in list(self._data["active"].items()):
+                if active == name:
+                    del self._data["active"][uid]
+            self._save()
         return True
 
     def list_all(self) -> list[Prompt]:
@@ -58,17 +70,26 @@ class PromptStorage:
     def list_by_category(self, category: str) -> list[Prompt]:
         return [p for p in self.list_all() if p.category == category]
 
+    def search(self, query: str) -> list[Prompt]:
+        q = query.lower()
+        return [
+            p for p in self.list_all()
+            if q in p.name.lower() or q in p.description.lower()
+        ]
+
     def set_active(self, user_id: int, prompt_name: str):
-        self._data["active"][str(user_id)] = prompt_name
-        self._save()
+        with self._lock:
+            self._data["active"][str(user_id)] = prompt_name
+            self._save()
 
     def get_active(self, user_id: int) -> Optional[Prompt]:
         name = self._data["active"].get(str(user_id))
         return self.get(name) if name else None
 
     def clear_active(self, user_id: int):
-        self._data["active"].pop(str(user_id), None)
-        self._save()
+        with self._lock:
+            self._data["active"].pop(str(user_id), None)
+            self._save()
 
     def categories(self) -> list[str]:
         return list({p.category for p in self.list_all()})

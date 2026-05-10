@@ -18,14 +18,11 @@ def render(template: str, variables: dict[str, str]) -> str:
     return _VAR_RE.sub(replacer, template)
 
 
-def build_messages(prompt: Prompt, user_input: str, variables: dict[str, str]) -> list[dict]:
+def build_messages(
+    prompt: Prompt, user_input: str, variables: dict[str, str]
+) -> tuple[list[dict], str]:
     system = render(prompt.template, variables)
-    return [
-        {
-            "role": "user",
-            "content": user_input,
-        }
-    ], system
+    return [{"role": "user", "content": user_input}], system
 
 
 async def ask_claude(
@@ -34,7 +31,7 @@ async def ask_claude(
     messages: list[dict],
     model: str = "claude-sonnet-4-6",
 ) -> AsyncIterator[str]:
-    # Use prompt caching for the system prompt to reduce costs on repeated calls
+    # Prompt caching on the system prompt reduces cost on repeated activations
     async with client.messages.stream(
         model=model,
         max_tokens=2048,
