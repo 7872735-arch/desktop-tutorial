@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>員工滿意度儀表板</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #22263a;
+      --border: #2e3350;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --accent3: #ff6b9d;
+      --warn: #ffb347;
+      --text: #e8eaf6;
+      --muted: #8a8fac;
+      --good: #00d4aa;
+      --mid: #ffb347;
+      --bad: #ff6b9d;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-left h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6c63ff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-left p { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; }
+    .badge {
+      background: linear-gradient(135deg, #6c63ff22, #00d4aa22);
+      border: 1px solid #6c63ff55;
+      color: var(--accent2);
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── KPI Row ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.2rem 1rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px #6c63ff22; }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .kpi-card.good::before { background: linear-gradient(90deg, #00d4aa, #6c63ff); }
+    .kpi-card.mid::before  { background: linear-gradient(90deg, #ffb347, #ff6b9d); }
+    .kpi-card.bad::before  { background: linear-gradient(90deg, #ff6b9d, #ff4444); }
+    .kpi-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .kpi-card.good .kpi-value { color: var(--good); }
+    .kpi-card.mid  .kpi-value { color: var(--mid); }
+    .kpi-card.bad  .kpi-value { color: var(--bad); }
+    .kpi-delta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.78rem;
+      margin-top: 0.4rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+    }
+    .kpi-delta.up   { background: #00d4aa18; color: #00d4aa; }
+    .kpi-delta.down { background: #ff6b9d18; color: #ff6b9d; }
+
+    /* ── Overall Score ── */
+    .overall-row {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 700px) { .overall-row { grid-template-columns: 1fr; } }
+
+    .score-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 1rem;
+      text-align: center;
+      position: relative;
+    }
+    .score-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; }
+    .donut-wrap { position: relative; width: 160px; height: 160px; margin: 0 auto 1rem; }
+    .donut-wrap canvas { position: absolute; top: 0; left: 0; }
+    .score-num {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.4rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #6c63ff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .score-sub { font-size: 0.8rem; color: var(--muted); }
+    .score-delta { font-size: 0.9rem; color: var(--good); margin-top: 0.5rem; }
+
+    /* ── Chart cards ── */
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+    .chart-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .chart-title span.dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
+
+    /* ── Trend Table ── */
+    .trend-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 0.6rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #2e335022;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #6c63ff0a; }
+
+    .bar-bg {
+      background: var(--surface);
+      border-radius: 999px;
+      height: 8px;
+      width: 120px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 1s ease;
+    }
+    .tag-good { color: var(--good); font-weight: 700; }
+    .tag-mid  { color: var(--mid);  font-weight: 700; }
+    .tag-bad  { color: var(--bad);  font-weight: 700; }
+
+    /* ── Suggestions ── */
+    .suggestions-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+    .suggestion-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.8rem;
+      border-left: 3px solid transparent;
+      transition: background 0.2s;
+    }
+    .suggestion-item:hover { background: #6c63ff0a; }
+    .suggestion-item.p1 { border-left-color: var(--bad); }
+    .suggestion-item.p2 { border-left-color: var(--mid); }
+    .suggestion-item.p3 { border-left-color: var(--accent2); }
+    .suggestion-rank {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+    .suggestion-item.p1 .suggestion-rank { background: #ff6b9d22; color: var(--bad); }
+    .suggestion-item.p2 .suggestion-rank { background: #ffb34722; color: var(--mid); }
+    .suggestion-item.p3 .suggestion-rank { background: #00d4aa22; color: var(--accent2); }
+    .suggestion-body h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .suggestion-body p  { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+    .priority-chip {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+    .p1 .priority-chip { background: #ff6b9d22; color: var(--bad); }
+    .p2 .priority-chip { background: #ffb34722; color: var(--mid); }
+    .p3 .priority-chip { background: #00d4aa22; color: var(--accent2); }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>員工滿意度儀表板</h1>
+      <p>Employee Satisfaction Dashboard &nbsp;·&nbsp; 2026 年 5 月</p>
+    </div>
+    <span class="badge">本月更新</span>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="kpi-card good">
+      <div class="kpi-label">薪資滿意度</div>
+      <div class="kpi-value">79%</div>
+      <span class="kpi-delta up">▲ +4%</span>
+    </div>
+    <div class="kpi-card mid">
+      <div class="kpi-label">工時合理性</div>
+      <div class="kpi-value">71%</div>
+      <span class="kpi-delta down">▼ −2%</span>
+    </div>
+    <div class="kpi-card good">
+      <div class="kpi-label">工作環境</div>
+      <div class="kpi-value">82%</div>
+      <span class="kpi-delta up">▲ +2%</span>
+    </div>
+    <div class="kpi-card mid">
+      <div class="kpi-label">溝通機制</div>
+      <div class="kpi-value">76%</div>
+      <span class="kpi-delta up">▲ +4%</span>
+    </div>
+    <div class="kpi-card bad">
+      <div class="kpi-label">升遷機會</div>
+      <div class="kpi-value">68%</div>
+      <span class="kpi-delta up">▲ +3%</span>
+    </div>
+  </div>
+
+  <!-- Overall Score + Radar -->
+  <div class="overall-row">
+    <div class="score-card">
+      <div class="score-label">整體員工滿意度</div>
+      <div class="donut-wrap">
+        <canvas id="donutChart" width="160" height="160"></canvas>
+        <div class="score-num">76</div>
+      </div>
+      <div class="score-sub">滿分 100 分</div>
+      <div class="score-delta">▲ 較上月 +2 分</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot"></span>各維度雷達圖</div>
+      <canvas id="radarChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Bar Charts -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--accent2)"></span>本月各指標分數</div>
+      <canvas id="barChart" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--accent3)"></span>上月 vs 本月對比</div>
+      <canvas id="compareChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Trend Table -->
+  <div class="trend-card">
+    <div class="chart-title" style="margin-bottom:1.2rem"><span class="dot" style="background:var(--warn)"></span>趨勢分析摘要</div>
+    <table>
+      <thead>
+        <tr>
+          <th>指標</th>
+          <th>上月</th>
+          <th>本月</th>
+          <th>變化</th>
+          <th>分佈</th>
+          <th>狀態</th>
+        </tr>
+      </thead>
+      <tbody id="trendBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Suggestions -->
+  <div class="suggestions-card">
+    <div class="chart-title" style="margin-bottom:1.2rem"><span class="dot" style="background:var(--bad)"></span>改進建議（優先排序）</div>
+
+    <div class="suggestion-item p1">
+      <div class="suggestion-rank">1</div>
+      <div class="suggestion-body">
+        <h4>升遷機會 <span class="priority-chip">最急迫</span></h4>
+        <p>目前僅 68%，是所有指標中最低的。建議建立透明的晉升標準與職涯路徑地圖，定期舉辦內部晉升說明會，讓員工清楚了解升遷條件與時間線，有效降低流失率。</p>
+      </div>
+    </div>
+
+    <div class="suggestion-item p2">
+      <div class="suggestion-rank">2</div>
+      <div class="suggestion-body">
+        <h4>工時合理性 <span class="priority-chip">需關注</span></h4>
+        <p>本月下滑 2%，顯示員工對工作負載的壓力有所增加。建議導入彈性工時制度或遠端工作選項，並審查部門人力配置，確認是否有人力不足的問題。</p>
+      </div>
+    </div>
+
+    <div class="suggestion-item p3">
+      <div class="suggestion-rank">3</div>
+      <div class="suggestion-body">
+        <h4>溝通機制 <span class="priority-chip">持續改善</span></h4>
+        <p>雖已提升至 76%，但仍有改善空間。建議增加跨部門溝通頻率（如月度全員會議），並建立匿名意見回饋渠道，讓員工有安全感表達意見。</p>
+      </div>
+    </div>
+
+    <div class="suggestion-item p3" style="border-left-color:#6c63ff">
+      <div class="suggestion-rank" style="background:#6c63ff22;color:var(--accent)">4</div>
+      <div class="suggestion-body">
+        <h4>薪資滿意度 &amp; 工作環境 <span class="priority-chip" style="background:#6c63ff22;color:var(--accent)">維持優勢</span></h4>
+        <p>這兩項表現較佳（79% / 82%），建議持續投資辦公環境設施，並在薪酬審查時保持市場競爭力，將優勢轉化為招募亮點。</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>Employee Satisfaction Dashboard &nbsp;·&nbsp; 數據週期：2026 年 4–5 月 &nbsp;·&nbsp; 樣本數：全體員工問卷</footer>
+</div>
+
+<script>
+const labels  = ['薪資滿意度','工時合理性','工作環境','溝通機制','升遷機會'];
+const current = [79, 71, 82, 76, 68];
+const prev    = [75, 73, 80, 72, 65];
+
+// ── Colour helpers ──
+const good = '#00d4aa', mid = '#ffb347', bad = '#ff6b9d', accent = '#6c63ff';
+function colourFor(v) { return v >= 80 ? good : v >= 72 ? mid : bad; }
+
+Chart.defaults.color = '#8a8fac';
+Chart.defaults.borderColor = '#2e3350';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+// ── Donut ──
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    datasets: [{
+      data: [76, 24],
+      backgroundColor: ['#6c63ff', '#22263a'],
+      borderWidth: 0,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    cutout: '78%',
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    animation: { animateRotate: true, duration: 1200 }
+  }
+});
+
+// ── Radar ──
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: '本月',
+        data: current,
+        borderColor: accent,
+        backgroundColor: accent + '33',
+        pointBackgroundColor: accent,
+        pointRadius: 4,
+        borderWidth: 2,
+      },
+      {
+        label: '上月',
+        data: prev,
+        borderColor: '#8a8fac',
+        backgroundColor: '#8a8fac18',
+        pointBackgroundColor: '#8a8fac',
+        pointRadius: 4,
+        borderWidth: 1.5,
+        borderDash: [4, 4],
+      }
+    ]
+  },
+  options: {
+    scales: {
+      r: {
+        min: 50, max: 100,
+        ticks: { stepSize: 10, backdropColor: 'transparent', font: { size: 10 } },
+        grid: { color: '#2e335066' },
+        pointLabels: { font: { size: 11 }, color: '#e8eaf6' }
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { boxWidth: 14, padding: 16, font: { size: 11 } }
+      }
+    },
+    animation: { duration: 1000 }
+  }
+});
+
+// ── Bar (current) ──
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: '滿意度 %',
+      data: current,
+      backgroundColor: current.map(v => colourFor(v) + 'cc'),
+      borderColor:     current.map(v => colourFor(v)),
+      borderWidth: 2,
+      borderRadius: 8,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    scales: {
+      x: { min: 0, max: 100, grid: { color: '#2e335044' } },
+      y: { grid: { display: false } }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ` ${ctx.raw}%` }
+      }
+    },
+    animation: { duration: 1000 }
+  }
+});
+
+// ── Compare ──
+new Chart(document.getElementById('compareChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: '上月',
+        data: prev,
+        backgroundColor: '#8a8fac55',
+        borderColor: '#8a8fac',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
+      },
+      {
+        label: '本月',
+        data: current,
+        backgroundColor: accent + 'aa',
+        borderColor: accent,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    scales: {
+      y: { min: 0, max: 100, grid: { color: '#2e335044' } },
+      x: { grid: { display: false } }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { boxWidth: 14, padding: 12, font: { size: 11 } }
+      },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } }
+    },
+    animation: { duration: 1000 }
+  }
+});
+
+// ── Trend Table ──
+const tbody = document.getElementById('trendBody');
+const rows = labels.map((l, i) => ({
+  label: l, prev: prev[i], curr: current[i],
+  delta: current[i] - prev[i]
+}));
+rows.forEach(r => {
+  const cls   = r.curr >= 80 ? 'tag-good' : r.curr >= 72 ? 'tag-mid' : 'tag-bad';
+  const dcls  = r.delta > 0 ? 'tag-good' : r.delta < 0 ? 'tag-bad' : 'tag-mid';
+  const dsign = r.delta > 0 ? '▲ +' : r.delta < 0 ? '▼ ' : '─ ';
+  const status = r.curr >= 80 ? '優秀' : r.curr >= 72 ? '良好' : '待改善';
+  const statcls = r.curr >= 80 ? 'tag-good' : r.curr >= 72 ? 'tag-mid' : 'tag-bad';
+  const pct = r.curr;
+  tbody.innerHTML += `
+  <tr>
+    <td><strong>${r.label}</strong></td>
+    <td>${r.prev}%</td>
+    <td class="${cls}">${r.curr}%</td>
+    <td class="${dcls}">${dsign}${Math.abs(r.delta)}%</td>
+    <td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+    <td class="${statcls}">${status}</td>
+  </tr>`;
+});
+</script>
+</body>
+</html>
