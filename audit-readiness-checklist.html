@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>驗廠準備度檢查清單</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3148;
+    --accent: #6366f1;
+    --accent2: #818cf8;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -.3px; }
+  .header h1 span { color: var(--accent2); }
+  .header-meta { font-size: .85rem; color: var(--text3); margin-top: 4px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border-radius: 8px; border: none;
+    font-size: .875rem; font-weight: 600; cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-outline {
+    background: transparent; color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { background: var(--surface2); color: var(--text); }
+  .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* ── Dashboard Row ── */
+  .dashboard {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:640px){ .dashboard { grid-template-columns: 1fr; } }
+
+  /* Radial Progress */
+  .radial-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 16px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .radial-wrap { position: relative; width: 130px; height: 130px; }
+  .radial-wrap svg { transform: rotate(-90deg); }
+  .radial-wrap circle { transition: stroke-dashoffset .6s cubic-bezier(.4,0,.2,1); }
+  .radial-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .radial-pct { font-size: 1.8rem; font-weight: 800; color: var(--text); }
+  .radial-label { font-size: .72rem; color: var(--text3); margin-top: 2px; }
+  .radial-title { font-size: .85rem; font-weight: 600; color: var(--text2); margin-top: 12px; }
+
+  /* Stats cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  @media(max-width:480px){ .stats-grid { grid-template-columns: repeat(3,1fr); gap:8px; } }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .stat-num { font-size: 2rem; font-weight: 800; }
+  .stat-num.green { color: var(--green); }
+  .stat-num.yellow { color: var(--yellow); }
+  .stat-num.red { color: var(--red); }
+  .stat-label { font-size: .78rem; color: var(--text3); margin-top: 4px; }
+  .stat-bar {
+    height: 4px; border-radius: 99px;
+    background: var(--border); margin-top: 10px; overflow: hidden;
+  }
+  .stat-bar-fill { height: 100%; border-radius: 99px; transition: width .5s; }
+  .stat-bar-fill.green { background: var(--green); }
+  .stat-bar-fill.yellow { background: var(--yellow); }
+  .stat-bar-fill.red { background: var(--red); }
+
+  /* Category progress */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .cat-name { font-size: .82rem; font-weight: 600; color: var(--text2); }
+  .cat-pct { font-size: .82rem; font-weight: 700; color: var(--accent2); }
+  .progress-bar {
+    height: 6px; border-radius: 99px;
+    background: var(--border); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .5s;
+  }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 18px; font-size: .875rem; font-weight: 600;
+    cursor: pointer; border: none; background: none;
+    color: var(--text3); border-bottom: 2px solid transparent;
+    transition: all .15s;
+  }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Checklist Table ── */
+  .section-label {
+    font-size: .75rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent2);
+    padding: 8px 0 4px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+  .checklist { display: flex; flex-direction: column; gap: 6px; }
+  .item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto auto;
+    align-items: center; gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: border-color .15s;
+  }
+  .item:hover { border-color: var(--accent); }
+  .item.done { border-color: #16a34a44; background: #052e1644; }
+  .item.in-progress { border-color: #b4520844; background: #1c100344; }
+  .item-num { font-size: .75rem; color: var(--text3); font-weight: 700; text-align: center; }
+  .item-body {}
+  .item-title { font-size: .9rem; font-weight: 600; }
+  .item-desc { font-size: .78rem; color: var(--text3); margin-top: 2px; }
+  .priority-badge {
+    font-size: .7rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 99px; white-space: nowrap;
+  }
+  .priority-badge.high { background: #7f1d1d44; color: #fca5a5; border: 1px solid #7f1d1d; }
+  .priority-badge.medium { background: #78350f44; color: #fcd34d; border: 1px solid #92400e; }
+  .priority-badge.low { background: #14532d44; color: #86efac; border: 1px solid #166534; }
+  .status-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 12px; border-radius: 8px;
+    font-size: .78rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text2);
+    transition: all .15s; white-space: nowrap; min-width: 88px; justify-content: center;
+  }
+  .status-btn.not-started { color: var(--text3); }
+  .status-btn.in-progress { background: #1c100344; color: #fbbf24; border-color: #92400e; }
+  .status-btn.done { background: #052e1644; color: #4ade80; border-color: #166534; }
+  .item-notes input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: var(--text2);
+    font-size: .75rem;
+    width: 130px;
+    outline: none;
+  }
+  .item-notes input:focus { border-color: var(--accent); }
+  @media(max-width:700px){
+    .item { grid-template-columns: 24px 1fr auto; }
+    .item-notes { display: none; }
+    .priority-badge { display: none; }
+  }
+
+  /* ── Priority Panel ── */
+  .priority-list { display: flex; flex-direction: column; gap: 10px; }
+  .priority-item {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .priority-rank {
+    font-size: 1.2rem; font-weight: 900;
+    width: 32px; text-align: center; color: var(--text3);
+  }
+  .priority-rank.top { color: var(--red); }
+  .priority-rank.mid { color: var(--yellow); }
+  .priority-info { flex: 1; }
+  .priority-info-title { font-weight: 700; }
+  .priority-info-sub { font-size: .78rem; color: var(--text3); margin-top: 2px; }
+  .priority-score {
+    font-size: .85rem; font-weight: 700;
+    padding: 4px 10px; border-radius: 8px;
+    background: var(--surface2); color: var(--accent2);
+  }
+
+  /* ── History / Snapshot ── */
+  .history-grid { display: flex; flex-direction: column; gap: 12px; }
+  .snapshot-row {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+  .snap-month { font-size: .85rem; font-weight: 700; min-width: 90px; }
+  .snap-pct { font-size: 1.5rem; font-weight: 800; color: var(--accent2); min-width: 60px; }
+  .snap-bar { flex: 1; min-width: 120px; }
+  .snap-delta { font-size: .82rem; font-weight: 700; }
+  .snap-delta.up { color: var(--green); }
+  .snap-delta.down { color: var(--red); }
+  .snap-delta.same { color: var(--text3); }
+  .snap-actions { display: flex; gap: 8px; }
+  .snap-detail { font-size: .75rem; color: var(--text3); margin-top: 4px; flex-basis: 100%; }
+  .empty-state {
+    text-align: center; padding: 48px 16px;
+    color: var(--text3); font-size: .9rem;
+  }
+  .empty-state .big { font-size: 2.5rem; margin-bottom: 8px; }
+
+  /* ── Report ── */
+  .report-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px;
+  }
+  #reportOutput {
+    font-family: 'Courier New', monospace;
+    font-size: .82rem; line-height: 1.7;
+    color: var(--text2);
+    white-space: pre-wrap;
+    background: var(--surface2);
+    border-radius: 8px; padding: 20px;
+    max-height: 540px; overflow-y: auto;
+    border: 1px solid var(--border);
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h1>驗廠準備度 <span>檢查清單</span></h1>
+      <div class="header-meta" id="lastSaved">尚未儲存 · 資料保存於本機</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="saveSnapshot()">📸 記錄本月快照</button>
+      <button class="btn btn-primary" onclick="switchTab('report')">📄 生成CEO報告</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard">
+    <div class="radial-card">
+      <div class="radial-wrap">
+        <svg width="130" height="130" viewBox="0 0 130 130">
+          <circle cx="65" cy="65" r="54" fill="none" stroke="#2e3148" stroke-width="11"/>
+          <circle id="radialArc" cx="65" cy="65" r="54" fill="none"
+            stroke="url(#arcGrad)" stroke-width="11"
+            stroke-linecap="round"
+            stroke-dasharray="339.3"
+            stroke-dashoffset="339.3"/>
+          <defs>
+            <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#22c55e"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="radial-center">
+          <div class="radial-pct" id="radialPct">0%</div>
+          <div class="radial-label">整體準備度</div>
+        </div>
+      </div>
+      <div class="radial-title">驗廠準備指數</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num green" id="cntDone">0</div>
+          <div class="stat-label">已完成</div>
+          <div class="stat-bar"><div class="stat-bar-fill green" id="barDone" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num yellow" id="cntProgress">0</div>
+          <div class="stat-label">進行中</div>
+          <div class="stat-bar"><div class="stat-bar-fill yellow" id="barProgress" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num red" id="cntNone">20</div>
+          <div class="stat-label">未開始</div>
+          <div class="stat-bar"><div class="stat-bar-fill red" id="barNone" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('checklist')" id="tab-checklist">✅ 檢查清單</button>
+    <button class="tab" onclick="switchTab('priority')" id="tab-priority">🎯 優先改善</button>
+    <button class="tab" onclick="switchTab('history')" id="tab-history">📈 月度進度</button>
+    <button class="tab" onclick="switchTab('report')" id="tab-report">📄 CEO報告</button>
+  </div>
+
+  <!-- TAB: CHECKLIST -->
+  <div class="tab-panel active" id="panel-checklist">
+    <div class="checklist" id="checklistEl"></div>
+  </div>
+
+  <!-- TAB: PRIORITY -->
+  <div class="tab-panel" id="panel-priority">
+    <div style="margin-bottom:16px;">
+      <h2 style="font-size:1.05rem;font-weight:700;">優先改善項目排序</h2>
+      <p style="font-size:.82rem;color:var(--text3);margin-top:4px;">依據「優先級權重 × 未完成狀態」自動排序，顯示最需立即行動的項目。</p>
+    </div>
+    <div class="priority-list" id="priorityList"></div>
+  </div>
+
+  <!-- TAB: HISTORY -->
+  <div class="tab-panel" id="panel-history">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h2 style="font-size:1.05rem;font-weight:700;">月度進度追蹤</h2>
+        <p style="font-size:.82rem;color:var(--text3);margin-top:4px;">每月記錄快照，追蹤改革動能與成果。</p>
+      </div>
+      <button class="btn btn-outline" onclick="clearHistory()" style="font-size:.78rem;">清除紀錄</button>
+    </div>
+    <div class="history-grid" id="historyGrid"></div>
+  </div>
+
+  <!-- TAB: REPORT -->
+  <div class="tab-panel" id="panel-report">
+    <div class="report-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2 style="font-size:1.05rem;font-weight:700;">改革進度報告</h2>
+          <p style="font-size:.82rem;color:var(--text3);margin-top:4px;">自動生成供CEO審閱的正式報告。</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" onclick="generateReport()" style="font-size:.8rem;">🔄 重新生成</button>
+          <button class="btn btn-primary" onclick="copyReport()" style="font-size:.8rem;">📋 複製報告</button>
+        </div>
+      </div>
+      <div id="reportOutput">點擊「重新生成」以產生最新報告…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ────────────────────────────────────────────
+// DATA
+// ────────────────────────────────────────────
+const ITEMS = [
+  // ── 系統基礎建設
+  { id:1,  cat:'系統基礎', title:'薪資系統數位化',       desc:'薪資計算全程數位化，消除手動試算表',       priority:'high',   weight:10 },
+  { id:2,  cat:'系統基礎', title:'工時自動計算系統',     desc:'打卡→工時→薪資全自動串接，無需人工統計', priority:'high',   weight:10 },
+  { id:3,  cat:'系統基礎', title:'考勤數位化管理',       desc:'生物辨識/APP打卡，杜絕代打卡問題',       priority:'high',   weight:9  },
+  { id:4,  cat:'系統基礎', title:'電子薪資條系統',       desc:'員工可隨時線上查詢當月及歷史薪資明細',   priority:'high',   weight:9  },
+  // ── 合規記錄
+  { id:5,  cat:'合規記錄', title:'12個月歷史數據完整保存', desc:'薪資、工時、考勤至少保留12個月可調閱',   priority:'high',   weight:10 },
+  { id:6,  cat:'合規記錄', title:'工會記錄系統化',       desc:'工會會議、選舉、決議均有完整數位記錄',   priority:'high',   weight:9  },
+  { id:7,  cat:'合規記錄', title:'合規文件數位管理',     desc:'勞動合約、政策文件版本控管與電子簽署',   priority:'high',   weight:8  },
+  { id:8,  cat:'合規記錄', title:'安全培訓記錄系統',     desc:'工安培訓出席、測驗成績完整存檔',         priority:'medium', weight:7  },
+  // ── 透明度與員工賦能
+  { id:9,  cat:'透明度',   title:'獎金透明度查詢平台',   desc:'員工可自助查詢獎金計算公式及個人金額',   priority:'high',   weight:8  },
+  { id:10, cat:'透明度',   title:'員工自助服務平台',     desc:'員工可線上申請假期、查薪資、更新資料',   priority:'medium', weight:7  },
+  { id:11, cat:'透明度',   title:'請假申請系統化',       desc:'線上申請→主管審核→自動扣薪計算',       priority:'medium', weight:6  },
+  { id:12, cat:'透明度',   title:'績效評核數位化',       desc:'KPI設定、評核流程、結果查詢全線上化',   priority:'medium', weight:6  },
+  // ── HR能力建設
+  { id:13, cat:'HR能力',   title:'HR團隊驗廠語言培訓',   desc:'HR能流利應對驗廠員訪問，熟悉標準用語', priority:'high',   weight:9  },
+  { id:14, cat:'HR能力',   title:'工人訪談話術準備',     desc:'員工熟悉如何描述薪資流程和工作環境',   priority:'high',   weight:8  },
+  { id:15, cat:'HR能力',   title:'驗廠文件快速調閱演練', desc:'模擬驗廠員要求，30分鐘內完成文件調取', priority:'medium', weight:7  },
+  // ── 流程管理
+  { id:16, cat:'流程管理', title:'招聘流程數位化',       desc:'JD發布→面試→錄取→入職全程線上追蹤',   priority:'medium', weight:5  },
+  { id:17, cat:'流程管理', title:'離職管理流程數位化',   desc:'離職申請、工作交接、資產歸還線上完成',   priority:'low',    weight:4  },
+  { id:18, cat:'流程管理', title:'供應商合規管理',       desc:'供應商勞工合規評估和定期複核記錄',       priority:'medium', weight:5  },
+  // ── 數據安全與自動化
+  { id:19, cat:'數據安全', title:'員工數據安全保護機制', desc:'GDPR/個資法合規，存取權限分級管控',     priority:'medium', weight:6  },
+  { id:20, cat:'數據安全', title:'合規報告自動化生成',   desc:'月/季報告由系統自動產出，無需人工彙整', priority:'medium', weight:6  },
+];
+
+const CATS = ['系統基礎','合規記錄','透明度','HR能力','流程管理','數據安全'];
+
+// State: status 0=未開始 1=進行中 2=完成
+let state = {
+  statuses: {},
+  notes: {},
+  snapshots: [],
+};
+
+function loadState(){
+  const s = localStorage.getItem('auditReadiness_v2');
+  if(s){
+    try { Object.assign(state, JSON.parse(s)); } catch(e){}
+  }
+}
+function saveState(){
+  localStorage.setItem('auditReadiness_v2', JSON.stringify(state));
+  const now = new Date();
+  document.getElementById('lastSaved').textContent =
+    `上次儲存: ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} · 資料保存於本機`;
+}
+
+// ────────────────────────────────────────────
+// CALC
+// ────────────────────────────────────────────
+function getStatus(id){ return state.statuses[id] || 0; }
+function calcScore(){
+  let total = 0, done = 0, prog = 0, none = 0;
+  ITEMS.forEach(it=>{
+    const s = getStatus(it.id);
+    total += it.weight;
+    if(s===2) done++;
+    else if(s===1) prog++;
+    else none++;
+  });
+  const weighted = ITEMS.reduce((acc,it)=>{
+    const s=getStatus(it.id);
+    return acc + it.weight * (s===2?1 : s===1?.5:0);
+  },0);
+  return {
+    pct: Math.round(weighted/total*100),
+    done, prog, none, total: ITEMS.length
+  };
+}
+function calcCat(cat){
+  const items = ITEMS.filter(it=>it.cat===cat);
+  const w = items.reduce((a,it)=>a+it.weight,0);
+  const dw = items.reduce((a,it)=>{
+    const s=getStatus(it.id);
+    return a+it.weight*(s===2?1:s===1?.5:0);
+  },0);
+  return Math.round(dw/w*100);
+}
+
+// ────────────────────────────────────────────
+// RENDER
+// ────────────────────────────────────────────
+function render(){
+  renderDashboard();
+  renderChecklist();
+  renderPriority();
+  renderHistory();
+}
+
+function renderDashboard(){
+  const {pct,done,prog,none} = calcScore();
+  const total = ITEMS.length;
+
+  // Radial
+  const arc = 339.3;
+  document.getElementById('radialArc').style.strokeDashoffset = arc*(1-pct/100);
+  document.getElementById('radialPct').textContent = pct+'%';
+
+  // Stats
+  document.getElementById('cntDone').textContent = done;
+  document.getElementById('cntProgress').textContent = prog;
+  document.getElementById('cntNone').textContent = none;
+  document.getElementById('barDone').style.width = (done/total*100)+'%';
+  document.getElementById('barProgress').style.width = (prog/total*100)+'%';
+  document.getElementById('barNone').style.width = (none/total*100)+'%';
+
+  // Cat cards
+  const cg = document.getElementById('catGrid');
+  cg.innerHTML = CATS.map(cat=>{
+    const p = calcCat(cat);
+    return `<div class="cat-card">
+      <div class="cat-header"><span class="cat-name">${cat}</span><span class="cat-pct">${p}%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${p}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderChecklist(){
+  const el = document.getElementById('checklistEl');
+  let html = '';
+  CATS.forEach(cat=>{
+    html += `<div class="section-label">${cat}</div>`;
+    ITEMS.filter(it=>it.cat===cat).forEach(it=>{
+      const s = getStatus(it.id);
+      const sClass = s===2?'done':s===1?'in-progress':'';
+      const btnClass = s===2?'done':s===1?'in-progress':'not-started';
+      const btnLabel = s===2?'✅ 完成':s===1?'🔄 進行中':'○ 未開始';
+      const pClass = it.priority==='high'?'high':it.priority==='medium'?'medium':'low';
+      const pLabel = it.priority==='high'?'高優先':it.priority==='medium'?'中優先':'低優先';
+      const note = state.notes[it.id]||'';
+      html += `
+      <div class="item ${sClass}" id="item-${it.id}">
+        <div class="item-num">${it.id}</div>
+        <div class="item-body">
+          <div class="item-title">${it.title}</div>
+          <div class="item-desc">${it.desc}</div>
+        </div>
+        <span class="priority-badge ${pClass}">${pLabel}</span>
+        <button class="status-btn ${btnClass}" onclick="cycleStatus(${it.id})">${btnLabel}</button>
+        <div class="item-notes"><input type="text" placeholder="備註…" value="${note}" onchange="updateNote(${it.id},this.value)" onclick="event.stopPropagation()"/></div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function renderPriority(){
+  const pending = ITEMS
+    .filter(it=>getStatus(it.id)<2)
+    .map(it=>({...it, score: it.weight*(getStatus(it.id)===1?0.5:1)}))
+    .sort((a,b)=>b.score-a.score);
+
+  if(!pending.length){
+    document.getElementById('priorityList').innerHTML =
+      '<div class="empty-state"><div class="big">🎉</div>所有項目已完成！恭喜達成100%驗廠準備度。</div>';
+    return;
+  }
+
+  document.getElementById('priorityList').innerHTML = pending.map((it,i)=>{
+    const rankClass = i<3?'top':i<6?'mid':'';
+    const sLabel = getStatus(it.id)===1?'(進行中 — 需加速完成)':'(尚未開始 — 最高優先)';
+    const pLabel = it.priority==='high'?'高優先':it.priority==='medium'?'中優先':'低優先';
+    return `
+    <div class="priority-item">
+      <div class="priority-rank ${rankClass}">#${i+1}</div>
+      <div class="priority-info">
+        <div class="priority-info-title">${it.title}</div>
+        <div class="priority-info-sub">${it.cat} · ${pLabel} · ${sLabel}</div>
+      </div>
+      <div class="priority-score">權重 ${it.weight}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const snaps = state.snapshots;
+  if(!snaps.length){
+    document.getElementById('historyGrid').innerHTML =
+      '<div class="empty-state"><div class="big">📸</div>尚無快照紀錄。<br>點擊右上角「記錄本月快照」開始追蹤改革進度。</div>';
+    return;
+  }
+  document.getElementById('historyGrid').innerHTML = [...snaps].reverse().map((snap,i)=>{
+    const prev = snaps[snaps.length-1-i-1];
+    const delta = prev ? snap.pct - prev.pct : null;
+    const deltaHtml = delta===null
+      ? '<span class="snap-delta same">基準月</span>'
+      : delta>0
+        ? `<span class="snap-delta up">▲ +${delta}%</span>`
+        : delta<0
+          ? `<span class="snap-delta down">▼ ${delta}%</span>`
+          : `<span class="snap-delta same">── 持平</span>`;
+    return `
+    <div class="snapshot-row">
+      <div class="snap-month">${snap.label}</div>
+      <div class="snap-pct">${snap.pct}%</div>
+      <div class="snap-bar">
+        <div class="progress-bar"><div class="progress-fill" style="width:${snap.pct}%"></div></div>
+      </div>
+      ${deltaHtml}
+      <div class="snap-detail">完成 ${snap.done} 項 · 進行中 ${snap.prog} 項 · 未開始 ${snap.none} 項</div>
+    </div>`;
+  }).join('');
+}
+
+// ────────────────────────────────────────────
+// ACTIONS
+// ────────────────────────────────────────────
+function cycleStatus(id){
+  const cur = getStatus(id);
+  state.statuses[id] = (cur+1)%3;
+  saveState();
+  render();
+}
+function updateNote(id,val){
+  state.notes[id]=val;
+  saveState();
+}
+
+function saveSnapshot(){
+  const {pct,done,prog,none} = calcScore();
+  const now = new Date();
+  const label = `${now.getFullYear()}年${now.getMonth()+1}月`;
+  state.snapshots.push({label, pct, done, prog, none, ts: Date.now()});
+  saveState();
+  renderHistory();
+  switchTab('history');
+  alert(`✅ 已記錄 ${label} 快照\n整體準備度：${pct}%`);
+}
+
+function clearHistory(){
+  if(!confirm('確定要清除所有月度快照紀錄？')) return;
+  state.snapshots = [];
+  saveState();
+  renderHistory();
+}
+
+function generateReport(){
+  const {pct,done,prog,none} = calcScore();
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+
+  const highDone = ITEMS.filter(it=>it.priority==='high'&&getStatus(it.id)===2).map(it=>it.title);
+  const highProg = ITEMS.filter(it=>it.priority==='high'&&getStatus(it.id)===1).map(it=>it.title);
+  const highNone = ITEMS.filter(it=>it.priority==='high'&&getStatus(it.id)===0).map(it=>it.title);
+  const topPending = ITEMS.filter(it=>getStatus(it.id)<2)
+    .sort((a,b)=>b.weight*(getStatus(a.id)===1?.5:1)-a.weight*(getStatus(b.id)===1?.5:1))
+    .slice(0,5);
+
+  const catSummary = CATS.map(cat=>`  · ${cat.padEnd(8)}：${calcCat(cat)}%`).join('\n');
+
+  const snaps = state.snapshots;
+  const trendLine = snaps.length>=2
+    ? `\n【改革動能趨勢】\n${snaps.slice(-4).map((s,i,a)=>{
+        const prev = a[i-1];
+        const d = prev?` (+${s.pct-prev.pct}%)`:'（基準）';
+        return `  ${s.label}：${s.pct}%${d}`;
+      }).join('\n')}` : '';
+
+  const urgentList = topPending.map((it,i)=>
+    `  ${i+1}. 【${it.priority==='high'?'高優先':'中優先'}】${it.title} — ${it.desc}`).join('\n');
+
+  const report =
+`╔══════════════════════════════════════════════════════════════╗
+║           HR 數位化 × 驗廠準備度 — 改革進度報告           ║
+╚══════════════════════════════════════════════════════════════╝
+報告日期：${dateStr}
+報告對象：CEO / 管理層
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+一、整體驗廠準備度指數
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  整體準備度：${pct}%  ${'█'.repeat(Math.round(pct/5))}${'░'.repeat(20-Math.round(pct/5))}
+
+  ✅ 已完成項目：${done} 項  |  🔄 進行中：${prog} 項  |  ○ 未開始：${none} 項
+  加權完成分數：${pct} / 100 分
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+二、各系統模組完成度
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${catSummary}
+${trendLine}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+三、高優先項目執行情況
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ 已完成（${highDone.length} 項）：
+${highDone.length?highDone.map(t=>'  · '+t).join('\n'):'  （無）'}
+
+🔄 進行中（${highProg.length} 項）：
+${highProg.length?highProg.map(t=>'  · '+t).join('\n'):'  （無）'}
+
+⚠️  尚未開始（${highNone.length} 項）：
+${highNone.length?highNone.map(t=>'  · '+t).join('\n'):'  （無）'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+四、緊急行動建議（Top 5 優先事項）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${urgentList||'  🎉 所有關鍵項目已完成！'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+五、準備度評級
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${pct>=90?'  🟢 A級 — 優秀（已具備迎接突擊驗廠的充分準備）'
+:pct>=70?'  🟡 B級 — 良好（主要系統就緒，補強少數缺口後可應對驗廠）'
+:pct>=50?'  🟠 C級 — 待改善（核心系統建設需加速，建議3個月強化計畫）'
+:'  🔴 D級 — 高風險（存在重大合規缺口，需立即啟動改革行動計畫）'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+本報告由「驗廠準備度檢查清單」系統自動生成
+數據基準日：${dateStr}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+  document.getElementById('reportOutput').textContent = report;
+}
+
+function copyReport(){
+  generateReport();
+  const text = document.getElementById('reportOutput').textContent;
+  navigator.clipboard.writeText(text).then(()=>alert('✅ 報告已複製到剪貼板！')).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ 報告已複製！');
+  });
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='report') generateReport();
+  if(name==='priority') renderPriority();
+}
+
+// ────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────
+loadState();
+render();
+</script>
+</body>
+</html>
